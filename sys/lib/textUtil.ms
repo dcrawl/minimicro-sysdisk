@@ -232,11 +232,11 @@ DialogButton.x = 20
 DialogButton.y = 10
 DialogButton.draw = function
 	c = text.backColor
-	text.row = self.y; text.column = self.x; print buttonLeft
+	text.row = self.y; text.column = self.x; printNoCR buttonLeft
 	text.backColor = color.black
-	text.row = self.y; text.column = self.x + 1; print self.caption
+	text.row = self.y; text.column = self.x + 1; printNoCR self.caption
 	text.backColor = c
-	text.row = self.y; text.column = self.x + 1 + self.caption.len; print buttonRight
+	text.row = self.y; text.column = self.x + 1 + self.caption.len; printNoCR buttonRight
 end function
 DialogButton.contains = function(pt)
 	return textRow(pt.y) == self.y and 
