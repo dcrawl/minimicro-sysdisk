@@ -56,9 +56,12 @@ CharData.findColorsFromImage = function(paletteMap, alphaBits)
 				colorIdx = 0
 			end if
 			if alphaBits == 8 then
-				// when alphaBits is 0, ignore the actual color
+				// when alphaBits is 8, ignore the actual color
 				// and just store the alpha instead.
 				colorIdx = hexStrToInt[alpha]
+			else if alphaBits == 0 then
+				// and when it's 0, still skip (use index 0 for) any transparent pixel
+				if alpha == "00" then colorIdx = 0
 			end if
 			self.colors.push colorIdx
 		end for
@@ -73,10 +76,12 @@ CharData.save = function(stream, paletteMap, alphaBits)
 	stream.writeByte self.relX
 	stream.writeByte self.relY
 	stream.writeByte self.shift
-	self.findColorsFromImage paletteMap, alphaBits
-	for c in self.colors
-		stream.writeByte c
-	end for
+	if self.width or self.height then
+		self.findColorsFromImage paletteMap, alphaBits
+		for c in self.colors
+			stream.writeByte c
+		end for
+	end if
 end function
 
 // Font class, storing all data about a particular font.
@@ -277,7 +282,7 @@ Font.save = function(path)
 	data.writeByte self.highestUsedColor
 	if self.version > 1.1 then
 		data.writeByte self.alphaBits
-		data.writeByte self.numPalettes
+		data.writeByte self.numPalettes - 1
 	else
 		data.pos = data.pos + 2
 	end if
@@ -429,11 +434,11 @@ Font.printChar = function(c, x=480, y=320, scale=1, tint="#FFFFFF")
 	x = x + d.relX
 	if d.image != null then
 		if scale == 1 then
-			y = y - self.sizeOver - d.relY - d.image.height
+			y = y - self.sizeOver - self.sizeUnder - d.relY - d.image.height
 			gfx.drawImage d.image, x, y, d.image.width, d.image.height,
 			  0, 0, d.image.width, d.image.height, tint
 		else
-			y = y + scale * (-self.sizeOver - d.relY - d.image.height)
+			y = y + scale * (-self.sizeOver - self.sizeUnder - d.relY - d.image.height)
 			gfx.drawImage d.image, x, y, d.image.width*scale, d.image.height*scale,
 			  0, 0, d.image.width, d.image.height, tint
 		end if
@@ -462,6 +467,20 @@ end function
 Font.printRight = function(s, x=940, y=320, scale=1, tint="#FFFFFF")
 	s = str(s)
 	self.print s, x - self.width(s, scale), y, scale, tint
+end function
+
+Font.printJustified = function(s, x, y, width=500, scale=1, tint="#FFFFFF")
+    words = s.split
+    w = 0
+    for word in words; w += self.width(word, scale); end for
+    ew = width - w // ("extra width")
+    ewPerWord = floor(ew/(words.len-1))
+    for i in words.indexes
+        self.print words[i], x, y, scale, tint
+        if i == words.len-2 then ewPerWord = ew
+        x += self.width(words[i], scale) + ewPerWord
+        ew -= ewPerWord
+    end for
 end function
 
 // Return the width of the given string in this font.
